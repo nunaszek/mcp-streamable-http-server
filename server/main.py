@@ -16,11 +16,12 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root)) # Allow importing config.py from root
 import config
-from .auth import loader as auth_loader
+from .middleware import loader as middleware_loader
 
 from .tool import loader as tool_loader
 from .event import InMemoryEventStore
 from .transport.streamable_http_manager import FastStreamableHTTPSessionManager
+from server.service.loader import ServiceLoader
 
 logger = logging.getLogger(__name__)
 
@@ -62,20 +63,44 @@ def run(
     server_name: str | None, 
     json_response: bool,
 ) -> int:
+
+    def _setup_logging(log_level_str: str, server_name_str: str, host_str: str, port_int: int, app_version_str: str):
+        logging.basicConfig(
+            level=getattr(logging, log_level_str.upper()),
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        )
+        logger.info(
+            f"Starting server '{server_name_str}' on {host_str}:{port_int} "
+            f"with log level {log_level_str}, App Version: {app_version_str}"
+        )
+
+    def _prepare_services(loader: ServiceLoader) -> dict:
+        prepared_services: dict = {}
+        if loader.service_instances:
+            for service_instance in loader.service_instances:
+                service_class_name = type(service_instance).__name__
+                prepared_services[service_class_name] = service_instance
+                # logger.info(f"Service '{service_class_name}' prepared for lifespan state.")
+        # else:
+            # logger.info("No service instances found to add to lifespan state.")
+        return prepared_services
+
     final_host = host if host is not None else config.HOST
     final_port = port if port is not None else config.PORT
     final_log_level = log_level if log_level is not None else config.LOG_LEVEL
     final_server_name = server_name if server_name is not None else config.SERVER_NAME
     final_json_response = json_response
 
-    logging.basicConfig(
-        level=getattr(logging, final_log_level.upper()),
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    )
-    logger.info(f"Starting server '{final_server_name}' on {final_host}:{final_port} with log level {final_log_level}, App Version: {config.APP_VERSION}")
+    _setup_logging(final_log_level, final_server_name, final_host, final_port, config.APP_VERSION)
 
-    auth_loader.load_strategies()
+    middleware_loader._discover_and_load_middlewares()
     tool_loader.load_tools_from_directory(TOOLS_CONFIG_DIR)
+
+    service_loader = ServiceLoader(services_package_name="service")
+    service_loader.discover_and_load_services()
+    # logger.info(f"ServiceLoader initialized for 'service' package and services discovered. Found {len(service_loader.service_instances)} services.")
+
+    services = _prepare_services(service_loader)
 
     app = Server(final_server_name)
 
@@ -84,12 +109,14 @@ def run(
         name: str, arguments: dict
     ) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
         ctx = app.request_context
+        print("ctx.lifespan_context:", ctx.lifespan_context)
         
         tool_instance = tool_loader.get_tool_instance(name) 
         
         if tool_instance:
             try:
-                return await tool_instance.invoke(ctx, arguments)
+                # Assuming tool_instance.invoke can now use ctx.lifespan_context if needed
+                return await tool_instance.invoke(ctx, arguments, services)
             except Exception as e:
                 logger.error(f"执行工具 '{name}' 的 invoke 方法时发生错误: {e}", exc_info=True)
                 return [
@@ -125,14 +152,35 @@ def run(
         await session_manager.handle_request(scope, receive, send)
 
     @contextlib.asynccontextmanager
-    async def lifespan(app_starlette: Starlette) -> AsyncIterator[None]:
-        """Context manager for managing session manager lifecycle."""
-        async with session_manager.run():
-            logger.info("Application started with StreamableHTTP session manager!")
+    async def lifespan(starlette_app_instance: Starlette) -> AsyncIterator[dict]:
+        """
+        Manages service lifecycle (start/stop) and yields the application state
+        containing active services.
+        """
+        _service_loader: ServiceLoader | None = getattr(starlette_app_instance.state, 'service_loader', None)
+        _services: dict = getattr(starlette_app_instance.state, 'services', {})
+        
+        logger.info("Lifespan context manager entered.")
+
+        async with contextlib.AsyncExitStack() as stack:
+            # Start session manager
+            await stack.enter_async_context(session_manager.run())
+            logger.info("Application started with StreamableHTTP session manager (lifespan)!")
+
+            if _service_loader:
+                # logger.info("Starting managed services (lifespan)...")
+                await _service_loader.start_all()
+                # Ensure services are released when the stack unwinds
+                stack.push_async_callback(_service_loader.release_all)
+                # logger.info("Managed services started and release registered (lifespan).")
+            else:
+                logger.warning("ServiceLoader not found in app state during lifespan. Services will not be started/stopped.")
+            
             try:
-                yield
+                # logger.info(f"Lifespan yielding services with keys: {list(_services.keys())}")
+                yield _services # Yield the pre-prepared map of services
             finally:
-                logger.info("Application shutting down...")
+                logger.info("Application shutting down (lifespan)...")
 
     async def homepage(request: StarletteRequest) -> JSONResponse:
         """Handler for the root path, providing server status and info."""
@@ -147,15 +195,17 @@ def run(
         })
 
     starlette_app = Starlette(
-        debug=True, # For development; consider making this configurable
+        debug=True, 
         routes=[
             Route("/", endpoint=homepage),
-            Mount("/mcp", app=handle_streamable_http),
+            Mount("/mcp", app=handle_streamable_http), # app here is our Server instance wrapped by handle_streamable_http
         ],
         lifespan=lifespan,
     )
-    # Correctly assign mcp_server_name to app.state here
+    # Store necessary components in Starlette app's state
     starlette_app.state.mcp_server_name = final_server_name
+    starlette_app.state.service_loader = service_loader  # For lifespan to start/stop services
+    starlette_app.state.services = services # For lifespan to yield
 
     import uvicorn
 

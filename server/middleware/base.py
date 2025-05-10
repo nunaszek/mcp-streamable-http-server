@@ -5,16 +5,15 @@ from typing import Any
 # For now, let's assume it can be imported from .core
 from .core import RequestCredentialsContext
 
-class AuthStrategy(ABC):
+class McpMiddleware(ABC):
     """
-    Abstract base class for an authentication/verification strategy.
-    Instances of this class are callable.
+    Abstract base class for an authentication/verification middleware.
     """
 
     @abstractmethod
     def __call__(self, context: RequestCredentialsContext) -> bool:
         """
-        Verifies the request based on the given context when the strategy instance is called.
+        Verifies the request based on the given context when the middleware instance is called.
 
         Args:
             context: The request credentials context.

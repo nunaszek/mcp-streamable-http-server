@@ -13,7 +13,7 @@ class BaseTool(abc.ABC):
 
     @abc.abstractmethod
     async def _invoke(
-        self, app_context: Any, arguments: Dict[str, Any]
+        self, context: Any, arguments: Dict[str, Any], services: dict[str, Any]
     ) -> List[types.TextContent | types.ImageContent | types.EmbeddedResource]:
         """
         Protected method to be implemented by subclasses to perform the tool's action.
@@ -21,9 +21,9 @@ class BaseTool(abc.ABC):
         raise NotImplementedError("Subclasses must implement the \'_invoke\' method.")
 
     async def invoke(
-        self, app_context: Any, arguments: Dict[str, Any]
+        self, context: Any, arguments: Dict[str, Any], services: dict[str, Any]
     ) -> List[types.TextContent | types.ImageContent | types.EmbeddedResource]:
         """
         Public method called by the system to execute the tool.
         """
-        return await self._invoke(app_context, arguments) 
+        return await self._invoke(context, arguments, services) 

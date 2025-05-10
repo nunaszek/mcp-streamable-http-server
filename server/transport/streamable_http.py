@@ -228,7 +228,8 @@ class FastStreamableHTTPServerTransport(StreamableHTTPServerTransport):
                         headers=request.headers,
                         client_ip=request.client.host if request.client else None,
                         user_agent=request.headers.get("user-agent"),
-                        session_id=request_session_id
+                        session_id=request_session_id,
+                        services=scope['state']
                     )
 
                     # Validate credentials

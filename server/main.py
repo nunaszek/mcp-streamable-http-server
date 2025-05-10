@@ -93,7 +93,7 @@ def run(
 
     _setup_logging(final_log_level, final_server_name, final_host, final_port, config.APP_VERSION)
 
-    middleware_loader._discover_and_load_middlewares()
+    middleware_loader._discover_and_load_middlewares(middleware_dir="middlewares")
     tool_loader.load_tools_from_directory(TOOLS_CONFIG_DIR)
 
     service_loader = ServiceLoader(services_package_name="service")
@@ -109,7 +109,6 @@ def run(
         name: str, arguments: dict
     ) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
         ctx = app.request_context
-        print("ctx.lifespan_context:", ctx.lifespan_context)
         
         tool_instance = tool_loader.get_tool_instance(name) 
         

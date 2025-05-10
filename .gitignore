@@ -130,3 +130,14 @@ __pycache__/
 # 其他
 *.pem
 .vercel
+
+# Local database file
+*.db
+*.sqlite
+*.sqlite3
+*.db
+*.sqlite
+*.sqlite3
+*.db
+*.sqlite
+*.sqlite3

@@ -28,14 +28,14 @@ def _discover_and_load_middlewares(middleware_dir: str = "server/middleware/midd
         _initialized = True
         return
     
-    middleware_package_name = "middlewares"
-
     try:
-        package = importlib.import_module(middleware_package_name, package=package_path)
-        logger.info(f"Looking for middlewares in package: {package_path}.{middleware_package_name}")
+        # package_path is now the direct importable name of the middleware package,
+        # e.g., "middlewares" if at root, or "server.middleware.middlewares" if nested.
+        package = importlib.import_module(package_path)
+        logger.info(f"Looking for middlewares in package: {package.__name__}")
 
         if not hasattr(package, '__path__'):
-            logger.error(f"Package '{package_path}.{middleware_package_name}' does not have __path__ attribute. Is it a valid package with an __init__.py?")
+            logger.error(f"Package '{package.__name__}' does not have __path__ attribute. Is it a valid package with an __init__.py?")
             _initialized = True
             return
 
@@ -61,9 +61,9 @@ def _discover_and_load_middlewares(middleware_dir: str = "server/middleware/midd
                 logger.error(f"Failed to instantiate middleware {cls.__name__} from {modname}: {e}", exc_info=True)
 
     except ImportError as e:
-        logger.error(f"Could not import the middlewares package '{package_path}.{middleware_package_name}'. Ensure it exists and is in Python's path: {e}", exc_info=True)
+        logger.error(f"Could not import the middlewares package '{package_path}'. Ensure it exists and is in Python's path: {e}", exc_info=True)
     except Exception as e:
-        logger.error(f"An unexpected error occurred during middleware discovery for package '{package_path}.{middleware_package_name}': {e}", exc_info=True)
+        logger.error(f"An unexpected error occurred during middleware discovery for package '{package_path}': {e}", exc_info=True)
     finally:
         _initialized = True
 

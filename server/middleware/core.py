@@ -1,4 +1,4 @@
-from typing import Optional, Mapping
+from typing import Optional, Mapping, Any
 from pydantic import BaseModel
 import logging
 
@@ -13,6 +13,7 @@ class RequestCredentialsContext(BaseModel):
     client_ip: Optional[str] = None
     user_agent: Optional[str] = None
     session_id: Optional[str] = None
+    services: Mapping[str, Any]
 
 def validate(context: RequestCredentialsContext) -> bool:
     """

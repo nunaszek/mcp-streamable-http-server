@@ -16,4 +16,5 @@ class TestMiddleware(McpMiddleware):
     def __call__(self, context: RequestCredentialsContext) -> bool:
         """Always returns True, effectively allowing the request."""
         logger.debug(f"TestMiddleware is allowing request for session: {context.session_id}, IP: {context.client_ip}")
-        return True 
+        print("context.services:", context.services)
+        return True

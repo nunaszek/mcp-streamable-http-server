@@ -36,16 +36,8 @@ LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO").upper() # Log Level
 # --- Application Information ---
 APP_VERSION: str = os.getenv("APP_VERSION", "0.1.0_default") # Application Version
 
-# --- Security/Auth Configuration ---
-# Load valid API keys from a comma-separated environment variable
-# Example in .env: ENV_VALID_API_KEYS="key1,key2,key3"
-_raw_api_keys = os.getenv("ENV_VALID_API_KEYS", "")
-VALID_API_KEYS: set[str] = set(key.strip() for key in _raw_api_keys.split(',') if key.strip())
-
-if not VALID_API_KEYS and _raw_api_keys: # Log if env var was set but resulted in no keys (e.g. only commas)
-    logger.warning(f"ENV_VALID_API_KEYS was set to '{_raw_api_keys}' but resulted in no valid API keys after parsing.")
-elif not VALID_API_KEYS: # Log if env var was not set or was empty
-    logger.info("ENV_VALID_API_KEYS is not set or is empty. No API keys loaded for APIKeyAuthStrategy.")
+# --- Database Configuration ---
+DATABASE_URL: str = os.getenv("DATABASE_URL")
 
 
 if __name__ == "__main__":
@@ -56,4 +48,4 @@ if __name__ == "__main__":
     print(f"  SERVER_NAME: {SERVER_NAME}")
     print(f"  JSON_RESPONSE: {JSON_RESPONSE}")
     print(f"  APP_VERSION: {APP_VERSION}")
-    print(f"  VALID_API_KEYS: {VALID_API_KEYS}")
+    print(f"  DATABASE_URL: {DATABASE_URL}") # Added DATABASE_URL to print output

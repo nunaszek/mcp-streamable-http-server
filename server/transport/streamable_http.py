@@ -35,7 +35,7 @@ from mcp.types import (
 from mcp.server.streamable_http import StreamableHTTPServerTransport
 
 # Import for API key validation
-from ..middleware import validate, RequestCredentialsContext
+from ..auth.core import validate, RequestCredentialsContext
 
 logger = logging.getLogger(__name__)
 

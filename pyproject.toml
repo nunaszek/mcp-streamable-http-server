@@ -1,14 +1,36 @@
 [project]
-name = "mcp-streamble-http"
+name = "mcp-streamable-http-server"
 version = "0.1.0"
-description = "Add your description here"
+description = "A simple MCP server exposing a StreamableHttp transport for testing"
 readme = "README.md"
-requires-python = ">=3.13"
-dependencies = [
-    "fastapi>=0.115.12",
-    "mcp[cli]>=1.8.0",
-]
+requires-python = ">=3.10"
+authors = [{ name = "Anthropic, PBC." }]
+keywords = ["mcp", "llm", "automation", "web", "fetch", "http", "streamable"]
+license = { text = "MIT" }
+dependencies = ["anyio>=4.5", "click>=8.1.0", "httpx>=0.27", "mcp", "starlette", "uvicorn"]
 
-[[tool.uv.index]]
-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
-default = true
+[project.scripts]
+server = "handler.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["handler"]
+
+[tool.pyright]
+include = ["handler"]
+venvPath = "."
+venv = ".venv"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = []
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.uv]
+dev-dependencies = ["pyright>=1.1.378", "pytest>=8.3.3", "ruff>=0.6.9"]

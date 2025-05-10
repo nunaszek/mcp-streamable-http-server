@@ -94,7 +94,6 @@ class FastStreamableHTTPSessionManager(StreamableHTTPSessionManager):
         """
         request = Request(scope, receive)
         request_mcp_session_id = request.headers.get(MCP_SESSION_ID_HEADER)
-        print(f"request_mcp_session_id: {request_mcp_session_id}")
 
         # Existing session case
         if (
@@ -111,6 +110,7 @@ class FastStreamableHTTPSessionManager(StreamableHTTPSessionManager):
             logger.debug("Creating new transport")
             async with self._session_creation_lock:
                 new_session_id = uuid4().hex
+                # TODO: 传递apikey
                 http_transport = FastStreamableHTTPServerTransport(
                     mcp_session_id=new_session_id,
                     is_json_response_enabled=self.json_response,

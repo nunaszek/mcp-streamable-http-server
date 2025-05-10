@@ -1,0 +1,7 @@
+name: notify
+description: Sends a single test notification.
+inputSchema:
+  type: object
+  properties: {} # No input parameters needed
+  additionalProperties: false
+source: tools/notify.py

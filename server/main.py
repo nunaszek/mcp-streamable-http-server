@@ -11,11 +11,17 @@ from starlette.applications import Starlette
 from starlette.routing import Mount
 from starlette.types import Receive, Scope, Send
 
+# 更新导入以指向 server.tool.loader
+from .tool import loader as tool_loader
+from pathlib import Path
+
 from .event import InMemoryEventStore
 from .transport.streamable_http_manager import FastStreamableHTTPSessionManager
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+TOOLS_CONFIG_DIR = Path(__file__).resolve().parent.parent / "tools"
 
 
 @click.command()
@@ -42,6 +48,9 @@ def run(
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
+    # tool_loader 现在是从 server.tool.loader 导入的
+    tool_loader.load_tools_from_directory(TOOLS_CONFIG_DIR)
+
     app = Server("mcp-streamable-http-demo")
 
     @app.call_tool()
@@ -49,91 +58,33 @@ def run(
         name: str, arguments: dict
     ) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
         ctx = app.request_context
-        print(f"name: {name}")
-        print(f"arguments: {arguments}")
-        if hasattr(ctx, 'meta'):
-            print(f"ctx.meta: {ctx.meta}")
+        
+        tool_instance = tool_loader.get_tool_instance(name) 
+        
+        if tool_instance:
+            try:
+                return await tool_instance.invoke(ctx, arguments)
+            except Exception as e:
+                return [
+                    types.TextContent(
+                        type="text",
+                        text=f"执行工具 '{name}' 时发生内部错误。请检查服务器日志。"
+                    )
+                ]
         else:
-            print("ctx does not have a 'meta' attribute.")
-        interval = arguments.get("interval", 1.0)
-        count = arguments.get("count", 5)
-        caller = arguments.get("caller", "unknown")
-
-        # Send the specified number of notifications with the given interval
-        for i in range(count):
-            # Include more detailed message for resumability demonstration
-            notification_msg = (
-                f"[{i+1}/{count}] Event from '{caller}' - "
-                f"Use Last-Event-ID to resume if disconnected"
-            )
-            await ctx.session.send_log_message(
-                level="info",
-                data=notification_msg,
-                logger="notification_stream",
-                # Associates this notification with the original request
-                # Ensures notifications are sent to the correct response stream
-                # Without this, notifications will either go to:
-                # - a standalone SSE stream (if GET request is supported)
-                # - nowhere (if GET request isn't supported)
-                related_request_id=ctx.request_id,
-            )
-            logger.debug(f"Sent notification {i+1}/{count} for caller: {caller}")
-            if i < count - 1:  # Don't wait after the last notification
-                await anyio.sleep(interval)
-
-        # This will send a resource notificaiton though standalone SSE
-        # established by GET request
-        await ctx.session.send_resource_updated(uri=AnyUrl("http:///test_resource"))
-        return [
-            types.TextContent(
-                type="text",
-                text=(
-                    f"Sent {count} notifications with {interval}s interval"
-                    f" for caller: {caller}"
-                ),
-            )
-        ]
+            logger.warning(f"未找到工具 '{name}' 的实例或定义。")
+            return [
+                types.TextContent(
+                    type="text",
+                    text=f"错误: 未找到名为 '{name}' 的工具。",
+                )
+            ]
 
     @app.list_tools()
     async def list_tools() -> list[types.Tool]:
-        return [
-            types.Tool(
-                name="start-notification-stream",
-                description=(
-                    "Sends a stream of notifications with configurable count"
-                    " and interval"
-                ),
-                inputSchema={
-                    "type": "object",
-                    "required": ["interval", "count", "caller"],
-                    "properties": {
-                        "interval": {
-                            "type": "number",
-                            "description": "Interval between notifications in seconds",
-                        },
-                        "count": {
-                            "type": "number",
-                            "description": "Number of notifications to send",
-                        },
-                        "caller": {
-                            "type": "string",
-                            "description": (
-                                "Identifier of the caller to include in notifications"
-                            ),
-                        },
-                    },
-                },
-            )
-        ]
+        return tool_loader.get_tool_definitions()
 
     # Create event store for resumability
-    # The InMemoryEventStore enables resumability support for StreamableHTTP transport.
-    # It stores SSE events with unique IDs, allowing clients to:
-    #   1. Receive event IDs for each SSE message
-    #   2. Resume streams by sending Last-Event-ID in GET requests
-    #   3. Replay missed events after reconnection
-    # Note: This in-memory implementation is for demonstration ONLY.
-    # For production, use a persistent storage solution.
     event_store = InMemoryEventStore()
 
     # Create the session manager with our app and event store

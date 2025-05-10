@@ -34,6 +34,9 @@ from mcp.types import (
 
 from mcp.server.streamable_http import StreamableHTTPServerTransport
 
+# Import for API key validation
+from ..middleware import validate, RequestCredentialsContext
+
 logger = logging.getLogger(__name__)
 
 # Maximum size for incoming messages
@@ -136,7 +139,8 @@ class FastStreamableHTTPServerTransport(StreamableHTTPServerTransport):
 
         if isinstance(message.root.params, dict):
             if self.mcp_session_id:
-                meta_dict_in_params = message.root.params["_meta"]
+                # Ensure _meta key exists before accessing it, initialize if not.
+                meta_dict_in_params = message.root.params.setdefault("_meta", {})
                 meta_dict_in_params["session_id"] = self.mcp_session_id
 
     async def _handle_post_request(
@@ -217,9 +221,24 @@ class FastStreamableHTTPServerTransport(StreamableHTTPServerTransport):
                 if self.mcp_session_id:
                     # Check if request has a session ID
                     request_session_id = self._get_session_id(request)
-                    print(f"request.query_params: {request.query_params.get('apikey')}")
 
-                    # TODO: session_id 和apikey验证
+                    # Create credentials context
+                    credentials_context = RequestCredentialsContext(
+                        query_params=request.query_params,
+                        headers=request.headers,
+                        client_ip=request.client.host if request.client else None,
+                        user_agent=request.headers.get("user-agent"),
+                        session_id=request_session_id
+                    )
+
+                    # Validate credentials
+                    if not validate(credentials_context):
+                        response = self._create_error_response(
+                            "Unauthorized: Invalid or missing credentials",
+                            HTTPStatus.UNAUTHORIZED,
+                        )
+                        await response(scope, receive, send)
+                        return
 
                     # If request has a session ID but doesn't match, return 404
                     if request_session_id and request_session_id != self.mcp_session_id:

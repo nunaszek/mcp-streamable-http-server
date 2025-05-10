@@ -1,0 +1,12 @@
+name: demo
+description: A demo tool that retrieves session ID and processes a user-provided message.
+inputSchema:
+  type: object
+  required:
+    - test
+  properties:
+    test:
+      type: string
+      description: A message provided by the user.
+  additionalProperties: false
+source: tools/demo.py

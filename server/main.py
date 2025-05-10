@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
     default=False,
     help="Enable JSON responses instead of SSE streams",
 )
-def main(
+def run(
     port: int,
     log_level: str,
     json_response: bool,

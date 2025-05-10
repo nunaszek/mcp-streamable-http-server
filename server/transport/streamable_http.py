@@ -134,104 +134,10 @@ class FastStreamableHTTPServerTransport(StreamableHTTPServerTransport):
         ):
             return
 
-        logger.debug(
-            f"Processing tools/call request. Original Params: {message.root.params}"
-        )
-
-        # Stage 1: Update self.mcp_session_id if client provided a valid one in _meta.session_id
         if isinstance(message.root.params, dict):
-            meta_payload_from_client = message.root.params.get("_meta")
-            if isinstance(meta_payload_from_client, dict):
-                session_id_from_client_meta = meta_payload_from_client.get(
-                    "session_id"
-                )
-                if isinstance(
-                    session_id_from_client_meta, str
-                ) and SESSION_ID_PATTERN.fullmatch(session_id_from_client_meta):
-                    if self.mcp_session_id != session_id_from_client_meta:
-                        logger.info(
-                            f"Updating self.mcp_session_id from client's tools/call _meta. Old: '{self.mcp_session_id}', New: '{session_id_from_client_meta}'"
-                        )
-                        self.mcp_session_id = session_id_from_client_meta
-                    else:
-                        logger.info(
-                            f"Client's tools/call _meta.session_id ('{session_id_from_client_meta}') matches current self.mcp_session_id. No update needed for self.mcp_session_id."
-                        )
-                elif (
-                    "session_id" in meta_payload_from_client
-                ):  # Key exists but value is invalid
-                    logger.warning(
-                        f"Client's tools/call _meta contained 'session_id' but its value was invalid or not a string: '{session_id_from_client_meta}'. self.mcp_session_id remains '{self.mcp_session_id}'."
-                    )
-
-        # Stage 2: Ensure message.root.params._meta.session_id reflects self.mcp_session_id if not already set by client.
-        # This modifies the message object in-place.
-        if isinstance(message.root.params, dict):
-            # Ensure _meta key exists and is a dictionary in params for injection
-            if not isinstance(message.root.params.get("_meta"), dict):
-                if "_meta" in message.root.params:
-                    logger.warning(
-                        f"tools/call params had a non-dict '_meta' field: {message.root.params.get('_meta')}. It will be replaced with a new dict if self.mcp_session_id is set."
-                    )
-                message.root.params["_meta"] = (
-                    {}
-                )  # Initialize/overwrite as dict to ensure we can inject session_id
-
-            meta_dict_in_params = message.root.params["_meta"]
-
-            if (
-                self.mcp_session_id
-            ):  # Only inject if transport currently has a session_id
-                if "session_id" not in meta_dict_in_params:
-                    logger.info(
-                        f"Injecting current self.mcp_session_id ('{self.mcp_session_id}') into tools/call params._meta.session_id as it was missing."
-                    )
-                    meta_dict_in_params["session_id"] = self.mcp_session_id
-                else:
-                    # This log can be useful if we need to debug why a client-sent session_id
-                    # in _meta might differ from self.mcp_session_id after Stage 1.
-                    # For now, we just log that it already exists.
-                    logger.info(
-                        f"tools/call params._meta.session_id already exists (value: '{meta_dict_in_params['session_id']}'). No injection of self.mcp_session_id needed here if it matches, or Stage 1 should have updated self.mcp_session_id."
-                    )
-
-        logger.debug(
-            f"After processing tools/call: Final Params: {message.root.params}, Current self.mcp_session_id: {self.mcp_session_id}"
-        )
-
-    async def _handle_initialization_request(
-        self,
-        message: JSONRPCMessage,
-        request: Request,
-        scope: Scope,
-        receive: Receive,
-        send: Send,
-    ) -> bool:
-        """Handles an initialization request. Returns True if a response was sent and processing should stop."""
-        is_initialization_request = (
-            isinstance(message.root, JSONRPCRequest)
-            and message.root.method == "initialize"
-        )
-
-        if is_initialization_request:
-            # Check if the server already has an established session
             if self.mcp_session_id:
-                # Check if request has a session ID
-                request_session_id = self._get_session_id(request)
-                # The following print is kept as it was in the user-provided snippet
-                print(f"request.query_params: {request.query_params.get('apikey')}")
-
-                # TODO: session_id 和apikey验证
-
-                # If request has a session ID but doesn't match, return 404
-                if request_session_id and request_session_id != self.mcp_session_id:
-                    response = self._create_error_response(
-                        "Not Found: Invalid or expired session ID",
-                        HTTPStatus.NOT_FOUND,
-                    )
-                    await response(scope, receive, send)
-                    return True  # Indicate that processing should stop
-        return False # Indicate that processing should continue
+                meta_dict_in_params = message.root.params["_meta"]
+                meta_dict_in_params["session_id"] = self.mcp_session_id
 
     async def _handle_post_request(
         self, scope: Scope, request: Request, receive: Receive, send: Send
@@ -300,11 +206,29 @@ class FastStreamableHTTPServerTransport(StreamableHTTPServerTransport):
             # and message.root.params
             self._preprocess_tools_call_params(message)
 
-            # Handle initialization request logic
-            if await self._handle_initialization_request(
-                message, request, scope, receive, send
-            ):
-                return
+            # Check if this is an initialization request
+            is_initialization_request = (
+                isinstance(message.root, JSONRPCRequest)
+                and message.root.method == "initialize"
+            )
+
+            if is_initialization_request:
+                # Check if the server already has an established session
+                if self.mcp_session_id:
+                    # Check if request has a session ID
+                    request_session_id = self._get_session_id(request)
+                    print(f"request.query_params: {request.query_params.get('apikey')}")
+
+                    # TODO: session_id 和apikey验证
+
+                    # If request has a session ID but doesn't match, return 404
+                    if request_session_id and request_session_id != self.mcp_session_id:
+                        response = self._create_error_response(
+                            "Not Found: Invalid or expired session ID",
+                            HTTPStatus.NOT_FOUND,
+                        )
+                        await response(scope, receive, send)
+                        return
 
             # For non-initialization requests, validate the session
             elif not await self._validate_session(request, send):

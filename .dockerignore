@@ -1,0 +1,39 @@
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Python virtual environment
+.venv
+venv/
+*/.venv/
+*/venv/
+
+# Python bytecode and cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Local configuration / secrets (if any, add them here)
+# .env
+# local_settings.py
+
+# Build artifacts (if any)
+dist/
+build/
+*.egg-info/
+
+# IDE specific
+.idea/
+.vscode/

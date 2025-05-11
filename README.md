@@ -118,7 +118,7 @@ sequenceDiagram
 2.  **克隆项目**:
 
     ```bash
-    git clone https://purty3/mcp-streamable-http-server
+    git clone https://github.com/purity3/mcp-streamable-http-server.git
     cd mcp-streamable-http-server
     ```
 

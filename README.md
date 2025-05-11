@@ -84,7 +84,7 @@ sequenceDiagram
         MCP服务器->>MCP服务器: 关联 session_token (与原始凭证)
         MCP服务器-->>客户端: 连接成功 (返回 session_id)
     end
-    deactivate MCP服务器 // 连接和初始鉴权阶段结束
+    deactivate MCP服务器
 
     客户端->>MCP服务器: API请求 (携带 session_id)
     activate MCP服务器
@@ -101,8 +101,6 @@ sequenceDiagram
         deactivate 外部服务
         MCP服务器->>MCP服务器: 整合信息
         MCP服务器-->>客户端: 返回结果
-    else key无效或获取失败
-        MCP服务器-->>客户端: 错误响应 (例如：key无效)
     end
     deactivate MCP服务器
 ```

@@ -84,7 +84,7 @@ sequenceDiagram
         MCP Server->>MCP Server: Associate session_token (with original credentials)
         MCP Server-->>Client: Connection successful (returns session_id)
     end
-    deactivate MCP Server // End of connection and initial authentication phase
+    deactivate MCP Server
 
     Client->>MCP Server: API request (with session_id)
     activate MCP Server
@@ -101,8 +101,6 @@ sequenceDiagram
         deactivate External Service
         MCP Server->>MCP Server: Consolidate information
         MCP Server-->>Client: Return result
-    else Key is invalid or retrieval failed
-        MCP Server-->>Client: Error response (e.g., invalid key)
     end
     deactivate MCP Server
 ```

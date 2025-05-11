@@ -4,27 +4,20 @@ from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.engine import Engine
 from contextlib import contextmanager
 import logging
-# import os # os was imported but not used
-# from pathlib import Path # Path was imported but not used
 from config import DATABASE_URL
 from typing import Generator, Optional
 
-from server.service.base import BaseService # Import BaseService
+from server.service.base import BaseService
 
 logger = logging.getLogger(__name__)
 
-# --- Module-level variables to hold the initialized engine and session factory ---
 _current_engine: Optional[Engine] = None
 _current_session_local: Optional[sessionmaker[SQLAlchemySession]] = None
 
-# 数据库基类
 Base: DeclarativeMeta = declarative_base()
 
 def get_db() -> Generator[SQLAlchemySession, None, None]:
-    """
-    获取数据库会话的生成器函数.
-    依赖于 DatabaseService 已经启动并初始化了 _current_session_local.
-    """
+    """Gets a database session. Relies on DatabaseService being started."""
     if _current_session_local is None:
         raise RuntimeError("DatabaseService has not been started or SessionLocal is not initialized.")
     db = _current_session_local()
@@ -35,10 +28,7 @@ def get_db() -> Generator[SQLAlchemySession, None, None]:
 
 @contextmanager
 def get_db_context() -> Generator[SQLAlchemySession, None, None]:
-    """
-    数据库会话上下文管理器.
-    依赖于 DatabaseService 已经启动并初始化了 _current_session_local.
-    """
+    """Database session context manager. Relies on DatabaseService being started."""
     if _current_session_local is None:
         raise RuntimeError("DatabaseService has not been started or SessionLocal is not initialized.")
     db = _current_session_local()
@@ -48,71 +38,45 @@ def get_db_context() -> Generator[SQLAlchemySession, None, None]:
         db.close()
 
 def _initialize_database_tables():
-    """内部函数: 初始化数据库, 创建所有表. Uses _current_engine."""
+    """Internal function to initialize database tables."""
     if _current_engine is None:
         raise RuntimeError("Database engine not initialized. Call DatabaseService.start() first.")
-    # Import all modules here that define models inheriting from Base
-    # so that Base.metadata.create_all(bind=engine) knows about them.
-    # Example: 
-    import models.session # This will make ApiKey and Session (which inherit Base) known to Base.metadata
-    logger.info(f"Initializing database tables using engine: {_current_engine}")
-    Base.metadata.create_all(bind=_current_engine) # Uses the service-managed _current_engine
-    logger.info("Database tables initialized.")
+    import models.session 
+    Base.metadata.create_all(bind=_current_engine)
 
 class DatabaseService(BaseService):
-    """
-    服务类，用于管理数据库的连接、初始化和会话工厂。
-    """
+    """Manages database connection, initialization, and session factory."""
     def __init__(self):
         super().__init__()
-        logger.info("DatabaseService instance created. Engine and SessionLocal will be initialized on start.")
 
     async def start(self) -> None:
-        """
-        启动数据库服务：创建引擎，会话工厂，并初始化表结构。
-        """
+        """Starts the database service: creates engine, session factory, and initializes tables."""
         global _current_engine, _current_session_local
-        logger.info("DatabaseService starting...")
         try:
             if _current_engine is not None or _current_session_local is not None:
-                logger.warning("DatabaseService already started or not properly released. Re-initializing.")
+                pass
             
-            logger.info(f"Creating database engine with URL: {DATABASE_URL}")
-            # Create and assign to _current_engine directly
-            engine_instance = create_engine( # Renamed local variable to avoid confusion
-                DATABASE_URL, connect_args={"check_same_thread": False} # For SQLite
+            engine_instance = create_engine(
+                DATABASE_URL, connect_args={"check_same_thread": False}
             )
             _current_engine = engine_instance
 
-            logger.info("Creating database session factory (_current_session_local).")
             _current_session_local = sessionmaker(autocommit=False, autoflush=False, bind=_current_engine)
             
-            _initialize_database_tables() # Call without arguments
-            logger.info("DatabaseService started successfully. Engine and SessionLocal are now available.")
+            _initialize_database_tables()
         except Exception as e:
-            logger.error(f"DatabaseService failed to start: {e}", exc_info=True)
-            _current_engine = None # Ensure reset on failure
+            _current_engine = None
             _current_session_local = None
             raise
 
     async def release(self) -> None:
-        """
-        释放数据库服务持有的资源。
-        """
+        """Releases resources held by the database service."""
         global _current_engine, _current_session_local
-        logger.info("DatabaseService releasing...")
         if _current_engine is not None:
             try:
-                # For some database engines (like async ones), dispose might be async
-                # For standard SQLAlchemy, dispose is synchronous.
-                logger.info(f"Disposing database engine: {_current_engine}")
                 _current_engine.dispose()
-                logger.info("Database engine disposed.")
             except Exception as e:
-                logger.error(f"Error disposing database engine: {e}", exc_info=True)
-        else:
-            logger.info("No active database engine to dispose.")
+                pass
         
         _current_engine = None
-        _current_session_local = None
-        logger.info("DatabaseService released. Engine and SessionLocal have been reset.") 
+        _current_session_local = None 

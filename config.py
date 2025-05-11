@@ -1,51 +1,64 @@
 import os
 import logging
 
-# For .env file support, ensure python-dotenv is installed (pip install python-dotenv)
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    logging.warning("python-dotenv not found. .env file will not be loaded.")
-    load_dotenv = None # type: ignore
-
 logger = logging.getLogger(__name__)
 
-# --- Server Configuration ---
-HOST: str = os.getenv("HOST", "0.0.0.0") # Server Host
+# --- .env File Support ---
+from dotenv import load_dotenv # type: ignore
+load_dotenv()
 
-_DEFAULT_PORT = 3000
-_port_str = os.getenv("PORT")
-PORT: int = _DEFAULT_PORT
-if _port_str is not None:
-    try:
-        PORT = int(_port_str)
-    except ValueError:
-        logger.warning(f"Invalid PORT '{_port_str}', defaulting to {_DEFAULT_PORT}.")
-        PORT = _DEFAULT_PORT
+# ==============================================================================
+# Server Configuration
+# ==============================================================================
+HOST: str = os.getenv("HOST", "0.0.0.0") # Host for the server to bind to
 
-SERVER_NAME: str = os.getenv("SERVER_NAME", "mcp-streamable-http-default-server") # Server Name
+PORT: int = int(os.getenv("PORT", 3000))
 
-# --- Feature Flags ---
-_json_response_str = os.getenv("JSON_RESPONSE", "False").lower()
-JSON_RESPONSE: bool = _json_response_str in ["true", "1", "t", "yes"] # JSON Response Mode
+SERVER_NAME: str = os.getenv("SERVER_NAME", "mcp-streamable-http-default-server") # Name of the server
 
-# --- Logging Configuration ---
-LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO").upper() # Log Level
+# ==============================================================================
+# Feature Flags
+# ==============================================================================
+JSON_RESPONSE: bool = os.getenv("JSON_RESPONSE", "False").lower() in ["true", "1", "t", "yes"] # Enable JSON responses instead of SSE for some tools
 
-# --- Application Information ---
-APP_VERSION: str = os.getenv("APP_VERSION", "0.1.0_default") # Application Version
+# ==============================================================================
+# Logging Configuration
+# ==============================================================================
+LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO").upper() # Logging level (e.g., DEBUG, INFO, WARNING, ERROR)
 
-# --- Database Configuration ---
-DATABASE_URL: str = os.getenv("DATABASE_URL")
+# ==============================================================================
+# Application Information
+# ==============================================================================
+APP_VERSION: str = os.getenv("APP_VERSION", "0.1.0_default") # Current version of the application
 
+# ==============================================================================
+# Database Configuration
+# ==============================================================================
+DATABASE_URL: str = os.getenv("DATABASE_URL") # URL for the database connection
+# Example for PostgreSQL: "postgresql://user:password@host:port/database"
+# Example for SQLite (file-based): "sqlite:///./your_database_name.db"
+# If DATABASE_URL is not set in .env, it defaults to a local SQLite DB.
 
+# ==============================================================================
+# Main Execution Block (for direct run or testing)
+# ==============================================================================
 if __name__ == "__main__":
-    print(f"Loaded Configuration:")
-    print(f"  HOST: {HOST}")
-    print(f"  PORT: {PORT}")
-    print(f"  LOG_LEVEL: {LOG_LEVEL}")
-    print(f"  SERVER_NAME: {SERVER_NAME}")
-    print(f"  JSON_RESPONSE: {JSON_RESPONSE}")
-    print(f"  APP_VERSION: {APP_VERSION}")
-    print(f"  DATABASE_URL: {DATABASE_URL}")
+    print("=" * 30)
+    print("Loaded Configuration Settings")
+    print("=" * 30)
+    print(f"  Server Host (HOST):           {HOST}")
+    print(f"  Server Port (PORT):           {PORT}")
+    print(f"  Server Name (SERVER_NAME):    {SERVER_NAME}")
+    print("-" * 30)
+    print(f"  Log Level (LOG_LEVEL):        {LOG_LEVEL}")
+    print(f"  App Version (APP_VERSION):    {APP_VERSION}")
+    print("-" * 30)
+    print(f"  JSON Response (JSON_RESPONSE):{JSON_RESPONSE}")
+    print("-" * 30)
+    print(f"  Database URL (DATABASE_URL):  {DATABASE_URL}")
+    print("=" * 30)
+
+    # Example of how logger might be used after basicConfig elsewhere
+    # logging.basicConfig(level=LOG_LEVEL) 
+    # logger.info("Configuration loaded and displayed.")
+    # logger.debug(f"Debug mode with HOST: {HOST}")

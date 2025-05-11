@@ -21,10 +21,11 @@ class GetSessionIdDemoTool(BaseTool):
         self, context: Any, arguments: Dict[str, Any], services: dict[str, Any]
     ) -> List[types.TextContent]:
         
-        test = arguments.get("test") # Get the new parameter
-        session_id = context.meta.session_id if hasattr(context, 'meta') and context.meta is not None and hasattr(context.meta, 'session_id') else "N/A"
+        input = arguments.get("input") # Get the new parameter
+
+        session_id = getattr(meta_obj, 'session_id', "N/A") if (meta_obj := getattr(context, 'meta', None)) is not None else "N/A"
         api_key = services.get("SessionService").get_api_key_by_session_id(session_id)
-        response_text = f"Session ID: {session_id}. Input: '{test}'. api_key: {api_key}"
+        response_text = f"Session ID: {session_id}.\nInput: '{input}'.\napi_key: {api_key}"
 
         return [
             types.TextContent(

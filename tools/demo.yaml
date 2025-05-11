@@ -5,7 +5,7 @@ inputSchema:
   required:
     - test
   properties:
-    test:
+    input:
       type: string
       description: A message provided by the user.
   additionalProperties: false

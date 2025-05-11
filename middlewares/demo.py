@@ -7,14 +7,11 @@ from server.middleware.core import RequestCredentialsContext
 logger = logging.getLogger(__name__)
 
 class TestMiddleware(McpMiddleware):
-    """A test authentication middleware that always allows requests."""
+    """A test middleware that always allows requests."""
 
     def __init__(self):
-        super().__init__() # Call the base class __init__ if it has one
-        logger.info("TestMiddleware initialized. This middleware will always allow requests.")
+        super().__init__()
 
     def __call__(self, context: RequestCredentialsContext) -> bool:
-        """Always returns True, effectively allowing the request."""
-        logger.debug(f"TestMiddleware is allowing request for session: {context.session_id}, IP: {context.client_ip}")
-        print("context.services:", context.services)
+        """Always returns True, allowing the request."""
         return True

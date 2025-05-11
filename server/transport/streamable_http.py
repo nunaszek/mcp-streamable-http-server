@@ -222,30 +222,33 @@ class FastStreamableHTTPServerTransport(StreamableHTTPServerTransport):
                     # Check if request has a session ID
                     request_session_id = self._get_session_id(request)
 
+                    # If request has a session ID but doesn't match, return 404
+                    if request_session_id and request_session_id != self.mcp_session_id:
+                        response = self._create_error_response(
+                            "Not Found: Invalid or expired session ID",
+                            HTTPStatus.NOT_FOUND,
+                        )
+                        await response(scope, receive, send)
+                        return
+                    
                     # Create credentials context
                     credentials_context = RequestCredentialsContext(
                         query_params=request.query_params,
                         headers=request.headers,
                         client_ip=request.client.host if request.client else None,
                         user_agent=request.headers.get("user-agent"),
-                        session_id=request_session_id,
+                        session_id=self.mcp_session_id,
                         services=scope['state']
                     )
+                    
+                    print(f"scope['state']: {self.mcp_session_id}")
+                    print(f"credentials_context: {credentials_context}")
 
                     # Validate credentials
-                    if not validate(credentials_context):
+                    if not await validate(credentials_context):
                         response = self._create_error_response(
                             "Unauthorized: Invalid or missing credentials",
                             HTTPStatus.UNAUTHORIZED,
-                        )
-                        await response(scope, receive, send)
-                        return
-
-                    # If request has a session ID but doesn't match, return 404
-                    if request_session_id and request_session_id != self.mcp_session_id:
-                        response = self._create_error_response(
-                            "Not Found: Invalid or expired session ID",
-                            HTTPStatus.NOT_FOUND,
                         )
                         await response(scope, receive, send)
                         return

@@ -1,6 +1,7 @@
 from typing import Optional, Mapping, Any
 from pydantic import BaseModel
 import logging
+import asyncio # Added for iscoroutinefunction
 
 from . import loader # Import the loader to get middlewares
 
@@ -15,7 +16,7 @@ class RequestCredentialsContext(BaseModel):
     session_id: Optional[str] = None
     services: Mapping[str, Any]
 
-def validate(context: RequestCredentialsContext) -> bool:
+async def validate(context: RequestCredentialsContext) -> bool:
     """
     Validates credentials by checking against all loaded authentication middlewares.
     If no middlewares are loaded, the request is allowed by default.
@@ -36,13 +37,19 @@ def validate(context: RequestCredentialsContext) -> bool:
         )
         return True # No middlewares to check, so validation passes
 
-    for middleware in loaded_middlewares:
+    for middleware_instance in loaded_middlewares: # Renamed for clarity
         try:
-            if not middleware(context):
-                logger.info(f"Auth middleware '{middleware}' failed for session: {context.session_id}, IP: {context.client_ip}")
-                return False # If any middleware fails, overall validation fails
+            # Check if the middleware's __call__ method is an async function
+            if asyncio.iscoroutinefunction(middleware_instance.__call__):
+                if not await middleware_instance(context): # Await if async
+                    logger.info(f"Async auth middleware '{type(middleware_instance).__name__}' failed for session: {context.session_id}, IP: {context.client_ip}")
+                    return False # If any middleware fails, overall validation fails
+            else: # For synchronous middlewares
+                if not middleware_instance(context): # Call directly if sync
+                    logger.info(f"Sync auth middleware '{type(middleware_instance).__name__}' failed for session: {context.session_id}, IP: {context.client_ip}")
+                    return False # If any middleware fails, overall validation fails
         except Exception as e:
-            logger.error(f"Error executing auth middleware '{middleware}': {e}", exc_info=True)
+            logger.error(f"Error executing auth middleware '{type(middleware_instance).__name__}': {e}", exc_info=True) # Log type for better debugging
             return False # Treat errors in a middleware as a validation failure
     
     logger.info(f"All auth middlewares passed for session: {context.session_id}, IP: {context.client_ip}")

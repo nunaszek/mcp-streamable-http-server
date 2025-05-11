@@ -20,15 +20,6 @@ _current_session_local: Optional[sessionmaker[SQLAlchemySession]] = None
 # 数据库基类
 Base: DeclarativeMeta = declarative_base()
 
-# 创建数据库引擎
-# Ensure DATABASE_URL is correctly configured, e.g., "sqlite:///./sql_app.db" for a local SQLite file
-engine = create_engine(
-    DATABASE_URL, connect_args={"check_same_thread": False} # check_same_thread is for SQLite
-)
-
-# 创建会话工厂
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
 def get_db() -> Generator[SQLAlchemySession, None, None]:
     """
     获取数据库会话的生成器函数.
@@ -56,14 +47,16 @@ def get_db_context() -> Generator[SQLAlchemySession, None, None]:
     finally:
         db.close()
 
-def _initialize_database_tables(engine_to_use: Engine):
-    """内部函数: 初始化数据库, 创建所有表."""
+def _initialize_database_tables():
+    """内部函数: 初始化数据库, 创建所有表. Uses _current_engine."""
+    if _current_engine is None:
+        raise RuntimeError("Database engine not initialized. Call DatabaseService.start() first.")
     # Import all modules here that define models inheriting from Base
     # so that Base.metadata.create_all(bind=engine) knows about them.
     # Example: 
     import models.session # This will make ApiKey and Session (which inherit Base) known to Base.metadata
-    logger.info(f"Initializing database tables using engine: {engine_to_use}")
-    Base.metadata.create_all(bind=engine_to_use)
+    logger.info(f"Initializing database tables using engine: {_current_engine}")
+    Base.metadata.create_all(bind=_current_engine) # Uses the service-managed _current_engine
     logger.info("Database tables initialized.")
 
 class DatabaseService(BaseService):
@@ -85,15 +78,16 @@ class DatabaseService(BaseService):
                 logger.warning("DatabaseService already started or not properly released. Re-initializing.")
             
             logger.info(f"Creating database engine with URL: {DATABASE_URL}")
-            engine = create_engine(
+            # Create and assign to _current_engine directly
+            engine_instance = create_engine( # Renamed local variable to avoid confusion
                 DATABASE_URL, connect_args={"check_same_thread": False} # For SQLite
             )
-            _current_engine = engine
+            _current_engine = engine_instance
 
-            logger.info("Creating database session factory (SessionLocal).")
+            logger.info("Creating database session factory (_current_session_local).")
             _current_session_local = sessionmaker(autocommit=False, autoflush=False, bind=_current_engine)
             
-            _initialize_database_tables(_current_engine) 
+            _initialize_database_tables() # Call without arguments
             logger.info("DatabaseService started successfully. Engine and SessionLocal are now available.")
         except Exception as e:
             logger.error(f"DatabaseService failed to start: {e}", exc_info=True)

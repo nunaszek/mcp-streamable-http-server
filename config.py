@@ -48,4 +48,4 @@ if __name__ == "__main__":
     print(f"  SERVER_NAME: {SERVER_NAME}")
     print(f"  JSON_RESPONSE: {JSON_RESPONSE}")
     print(f"  APP_VERSION: {APP_VERSION}")
-    print(f"  DATABASE_URL: {DATABASE_URL}") # Added DATABASE_URL to print output
+    print(f"  DATABASE_URL: {DATABASE_URL}")

